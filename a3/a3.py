@@ -1,4 +1,3 @@
-import time
 import math
 
 class Node:
@@ -13,21 +12,24 @@ class Node:
 
     def __lt__(self, other):
         return self.fValue < other.fValue
-    
-    def __hash__(self):
-        return hash(self.board)
+
+    def __str__(self):
+        return str(self.board)+"\nf: " + str(self.fValue)+ "\nsteps: "+ str(self.depth)+"\n"
 
     def __bool__(self):
         return True
 
+    def __hash__(self):
+        return hash(self.board)
+
 class Board:
-    # The 8-puzzle board representation #
     def __init__(self, matrix):
         self.matrix = matrix
-
         for i in range(len(matrix)):
             if 0 in matrix[i]:
                 self.blankPos = (i, matrix[i].index(0))
+                return
+        raise ValueError("Invalid Matrix!")
 
     def __str__(self):
         s = ""
@@ -36,9 +38,10 @@ class Board:
         return s + "\n"
 
     def __eq__(self, other):
+        if type(other) is not Board:
+            return False
         otherMatrix = other.matrix
         thisMatrix = self.matrix
-        
         if len(thisMatrix) != len(otherMatrix):
             return False
         for i in range(len(thisMatrix)):
@@ -48,7 +51,7 @@ class Board:
                 if thisMatrix[i][j] != otherMatrix[i][j]:
                     return False
         return True
-    
+
     def duplicate(self):
         newMatrix = []
         for i in range(len(self.matrix)):
@@ -80,39 +83,43 @@ class Board:
             newBoard.matrix[self.blankPos[0]][self.blankPos[1]] = saveVal
             newBoard.blankPos = (self.blankPos[0] + dir[0], self.blankPos[1] + dir[1])
             return newBoard
-    
+
     def __hash__(self):
         s = 0
         for i in range(len(self.matrix)):
             for j in range(len(self.matrix[i])):
                 s *= 10
                 s += self.matrix[i][j]
-
         return s
 
 
-def fastSearch(frontier, goalBoard, explored):
-    curNode = frontier.pop(0)
-    explored.add(curNode)
-    if curNode.board == goalBoard:
-        print(curNode.depth)
+def fastSearch(frontier, limit, goalBoard, explored, astar):
+    if not frontier:
         return True
-    aStarExpansion(curNode, frontier, goalBoard, explored)
-    return False
-        
+    else:
+        curNode = frontier.pop(0)
+        explored.add(curNode)
+        if curNode.board == goalBoard:
+            print(curNode.depth)
+            return curNode
+        elif limit == 0:
+            print("Limit Reached")
+            return True
+        elif astar:
+            aStarExpansion(curNode, frontier, goalBoard, explored)
+            return False
 
-def fastSearchClient(board, goalBoard):
-    frontier = [Node(board, None, heuristic(board, goalBoard), 0)]
+def fastSearchClient(board, limit, goalBoard, astar):
+    if astar:
+        frontier = [Node(board, None, heuristic(board, goalBoard), 0)]
+    else:
+        frontier = [Node(board, None, 0, 0)]
     explored = set()
-
-    limit = 0
-
-    while (limit < 1000):
-        retval = fastSearch(frontier, goalBoard, explored)
+    for i in range(limit):
+        retval = fastSearch(frontier, limit - i, goalBoard, explored, astar)
         if retval:
-            return
-        limit += 1
-    return
+            return retval
+    return None
 
 # Function to expand the frontier using aStar #
 def aStarExpansion(currentNode, frontier, goalBoard, explored):
@@ -156,6 +163,10 @@ def aStarExpansion(currentNode, frontier, goalBoard, explored):
                 break
 
 def heuristic(currentBoard, goalBoard):
+    return manhattan(currentBoard)
+
+
+def manhattan(currentBoard):
     currentMatrix = currentBoard.matrix
     sum = 0
 
@@ -173,15 +184,20 @@ def heuristic(currentBoard, goalBoard):
 
     return sum
 
-    
-arr = [[1 for i in range(3)] for j in range(3)]
+def main():
 
-for i in range(3):
-    arr[i][0], arr[i][1], arr[i][2] = input().split()
+    goalBoard = Board([[1, 2, 3], [4, 5, 6], [7, 8, 0]])
 
+    arr = [[1 for i in range(3)] for j in range(3)]
 
-for i in range(3):
-    for j in range(3):
-        arr[i][j] = int(arr[i][j])
+    for i in range(3):
+        arr[i][0], arr[i][1], arr[i][2] = input().split()
 
-fastSearchClient(Board(arr), Board([[1, 2, 3], [4, 5, 6], [7, 8, 0]]))
+    for i in range(3):
+        for j in range(3):
+            arr[i][j] = int(arr[i][j])
+
+    fastSearchClient(Board(arr), 1000, goalBoard, True)
+
+if __name__ == "__main__":
+    main()
